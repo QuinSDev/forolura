@@ -1,6 +1,7 @@
 package com.alura.forolura.controller;
 
 import com.alura.forolura.domain.topico.*;
+import com.alura.forolura.domain.topico.validaciones.ErrorResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.transaction.Transactional;
@@ -51,45 +52,81 @@ public class TopicoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DatosListarTopico> listarTopicoPorId(@PathVariable Long id) {
-        Optional<Topico> topico = topicoService.buscarTopicoPorId(id);
+    public ResponseEntity<?> listarTopicoPorId(@PathVariable String id) {
+        try {
+            Long idConver = Long.parseLong(id);
 
-        if (!topico.isPresent()) {
-            return ResponseEntity.notFound().build();
+            Optional<Topico> topico = topicoService.buscarTopicoPorId(idConver);
+
+            if (!topico.isPresent()) {
+                String errorMensaje = "El id no se encuentra en la base de datos";
+                return ResponseEntity.badRequest().body(new ErrorResponse(errorMensaje));
+            }
+            DatosListarTopico datosListarTopico = new DatosListarTopico(
+                    topico.get().getId(),
+                    topico.get().getTitulo(),
+                    topico.get().getMensaje(),
+                    topico.get().getUsuario().getEmail(),
+                    topico.get().getCurso(),
+                    topico.get().getFechaCreacion()
+            );
+            return ResponseEntity.ok(datosListarTopico);
+        } catch (NumberFormatException e) {
+            String errorMessage = "El ID debe ser un número válido.";
+            return ResponseEntity.badRequest().body(new ErrorResponse(errorMessage));
         }
-        DatosListarTopico datosListarTopico = new DatosListarTopico(
-                topico.get().getId(),
-                topico.get().getTitulo(),
-                topico.get().getMensaje(),
-                topico.get().getUsuario().getEmail(),
-                topico.get().getCurso(),
-                topico.get().getFechaCreacion()
-        );
-        return ResponseEntity.ok(datosListarTopico);
     }
 
     @PutMapping("/actualizar/{id}")
-    public ResponseEntity<DatosListarTopico> actualizarTopico(@PathVariable Long id, @RequestBody DatosRegistroTopico datos) {
-        Topico topicoActualizado = topicoService.actualizarTopico(id, datos);
-        DatosListarTopico datosActualizado = new DatosListarTopico(topicoActualizado.getId(), topicoActualizado.getTitulo(),
-                topicoActualizado.getMensaje(), topicoActualizado.getUsuario().getEmail(), topicoActualizado.getCurso(),
-                topicoActualizado.getFechaCreacion());
+    public ResponseEntity<?> actualizarTopico(@PathVariable String id, @RequestBody DatosRegistroTopico datos) {
+        try {
+            Long idConver = Long.parseLong(id);
 
-        return ResponseEntity.ok(datosActualizado);
+            Topico topicoActualizado = topicoService.actualizarTopico(idConver, datos);
+            DatosListarTopico datosActualizado = new DatosListarTopico(topicoActualizado.getId(), topicoActualizado.getTitulo(),
+                    topicoActualizado.getMensaje(), topicoActualizado.getUsuario().getEmail(), topicoActualizado.getCurso(),
+                    topicoActualizado.getFechaCreacion());
+
+            return ResponseEntity.ok(datosActualizado);
+        } catch (NumberFormatException e) {
+            String errorMessage = "El ID debe ser un número válido.";
+            return ResponseEntity.badRequest().body(new ErrorResponse(errorMessage));
+        }
+
     }
 
     @DeleteMapping("/desactivar/{id}")
     @Transactional
-    public ResponseEntity desactivarTopico(@PathVariable Long id) {
-        var topico = topicoRepository.getReferenceById(id);
-        topico.desactivar();
-        return ResponseEntity.noContent().build();
+    public ResponseEntity desactivarTopico(@PathVariable String id) {
+        try {
+            Long idConver = Long.parseLong(id);
+            var topico = topicoRepository.getReferenceById(idConver);
+
+            if (topico == null) {
+                String errorMensaje = "El id no se encuentra en la base de datos";
+                return ResponseEntity.badRequest().body(new ErrorResponse(errorMensaje));
+            }
+
+            topico.desactivar();
+            return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            String errorMessage = "El ID debe ser un número válido.";
+            return ResponseEntity.badRequest().body(new ErrorResponse(errorMessage));
+        }
+
+
     }
 
     @DeleteMapping("/eliminar/{id}")
     @Transactional
-    public ResponseEntity eliminarTopicoDeBD(@PathVariable Long id) {
-        topicoService.eliminarTopico(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity eliminarTopicoDeBD(@PathVariable String id) {
+        try {
+            Long idConver = Long.parseLong(id);
+            topicoService.eliminarTopico(idConver);
+            return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            String errorMessage = "El ID debe ser un número válido.";
+            return ResponseEntity.badRequest().body(new ErrorResponse(errorMessage));
+        }
     }
 }
